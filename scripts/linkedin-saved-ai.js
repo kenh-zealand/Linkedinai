@@ -100,30 +100,72 @@ async function collectVisibleItems(page) {
   return page.evaluate(() => {
     const uniq = new Set();
     const rows = [];
-    const roots = Array.from(document.querySelectorAll("main li, main article, main section, main div"));
+    const anchors = Array.from(
+      document.querySelectorAll('main a[href*="/feed/update/"], main a[href*="/posts/"]'),
+    );
 
-    for (const el of roots) {
-      const text = (el.innerText || "").replace(/\s+/g, " ").trim();
-      if (text.length < 120) continue;
+    const clean = (value) => (value || "").replace(/\s+/g, " ").trim();
 
-      const linkEl =
-        el.querySelector('a[href*="/feed/update/"]') ||
-        el.querySelector('a[href*="/posts/"]') ||
-        el.querySelector('a[href*="linkedin.com"]') ||
-        el.querySelector("a[href]");
-      const url = linkEl ? linkEl.href : "";
+    const canonicalizeUrl = (href) => {
+      if (!href) return "";
+      try {
+        const u = new URL(href, window.location.origin);
+        if (!u.hostname.includes("linkedin.com")) return "";
 
-      const key = `${url}::${text.slice(0, 180)}`;
+        // Prefer canonical activity URL to avoid duplicate query variants.
+        const activity = u.pathname.match(/\/feed\/update\/urn:li:activity:(\d+)/);
+        if (activity) {
+          return `https://www.linkedin.com/feed/update/urn:li:activity:${activity[1]}`;
+        }
+
+        return `${u.origin}${u.pathname}`.replace(/\/$/, "");
+      } catch {
+        return "";
+      }
+    };
+
+    const getBestContainer = (anchor) => {
+      const candidates = [
+        anchor.closest("article"),
+        anchor.closest('li[data-urn], li'),
+        anchor.closest('div[data-urn], div[data-id]'),
+        anchor.closest("section"),
+      ].filter(Boolean);
+
+      if (candidates.length === 0) return anchor;
+
+      let best = candidates[0];
+      let bestLen = clean(best.innerText || "").length;
+
+      for (const c of candidates.slice(1)) {
+        const len = clean(c.innerText || "").length;
+        if (len >= 80 && len <= bestLen) {
+          best = c;
+          bestLen = len;
+        }
+      }
+
+      return best;
+    };
+
+    for (const anchor of anchors) {
+      const url = canonicalizeUrl(anchor.href);
+      if (!url) continue;
+
+      const container = getBestContainer(anchor);
+      const text = clean(container.innerText || "");
+
+      // Skip tiny text blobs and giant layout wrappers.
+      if (text.length < 80 || text.length > 3500) continue;
+
+      const key = `${url}::${text.slice(0, 120)}`;
       if (uniq.has(key)) continue;
       uniq.add(key);
 
-      const dateMatch = text.match(
-        /\b(\d+\s*(d|u|h|min|sec|w|mo|yr)|\d{1,2}\s+\w+\s+\d{4}|\w+\s+\d{4})\b/i,
-      );
-
+      const dateMatch = text.match(/\b(\d+\s*(d|u|h|min|sec|w|mo|yr))\b/i);
       rows.push({
         url,
-        snippet: text.slice(0, 5000),
+        snippet: text.slice(0, 3500),
         detectedDateText: dateMatch ? dateMatch[0] : "",
       });
     }
@@ -162,7 +204,7 @@ async function run() {
     for (let i = 0; i < args.maxScrolls; i += 1) {
       const current = await collectVisibleItems(page);
       for (const item of current) {
-        const key = `${item.url}::${item.snippet.slice(0, 180)}`;
+        const key = item.url || item.snippet.slice(0, 180);
         if (!collected.has(key)) {
           collected.set(key, item);
         }
