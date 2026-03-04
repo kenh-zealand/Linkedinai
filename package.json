@@ -1,0 +1,16 @@
+{
+  "name": "linkedinai",
+  "version": "1.0.0",
+  "description": "Export AI-related saved LinkedIn posts to CSV using Playwright",
+  "main": "scripts/linkedin-saved-ai.js",
+  "scripts": {
+    "scrape:linkedin:saved": "node scripts/linkedin-saved-ai.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}
