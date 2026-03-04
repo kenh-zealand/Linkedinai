@@ -1,39 +1,52 @@
-# LinkedIn Saved AI Export
+# LinkedIn Export AI Processing
 
-Henter dine synlige gemte LinkedIn-indlaeg og eksporterer dem, der matcher AI-noegleord, til CSV.
+Compliant flow: brug LinkedIns officielle data-export og process CSV lokalt.
 
 ## Setup
 
 ```bash
 npm install
-npx playwright install chromium
 ```
 
-## Koer script
+## 1) Hent officiel LinkedIn export
+
+1. LinkedIn -> Settings & Privacy -> Data privacy -> Get a copy of your data
+2. Download zip-filen fra LinkedIn
+3. Udpak zip til en lokal mappe, fx `data/linkedin-export`
+
+## 2) Process export lokalt (ingen scraping)
+
+```bash
+npm run process:linkedin:export -- --input data/linkedin-export
+```
+
+Output:
+
+- `output/export-all-posts.csv`
+- `output/export-ai-posts.csv`
+
+## Valgfrie argumenter
+
+```bash
+node scripts/process-linkedin-export.js --input data/linkedin-export --outputAll output/all.csv --outputAI output/ai.csv --keywords "ai,llm,openai,anthropic"
+```
+
+- `--input`: Mappe med udpakket LinkedIn export
+- `--outputAll`: CSV med alle normaliserede poster
+- `--outputAI`: CSV med AI-filtrerede poster
+- `--keywords`: Kommasepareret liste af noegleord
+
+## Legacy (ikke anbefalet)
+
+Der findes stadig et tidligere browser-script:
 
 ```bash
 npm run scrape:linkedin:saved
 ```
 
-Foerste gang aabnes en browser, hvor du logger ind paa LinkedIn. Tryk Enter i terminalen, naar login er gennemfoert.
-
-Output skrives til:
-
-`output/saved-ai-posts.csv`
-
-## Valgfrie argumenter
-
-```bash
-node scripts/linkedin-saved-ai.js --maxScrolls 50 --output output/my-ai.csv --keywords "ai,llm,openai,anthropic"
-```
-
-- `--maxScrolls`: Hvor langt ned der scrolles i saved-listen.
-- `--output`: Placering af CSV-fil.
-- `--keywords`: Kommasepareret liste af ord til filtrering.
-- `--headless`: Koer browseren uden UI (kun naar login-state allerede findes).
+Dette er automatiseret scraping og kan vaere i konflikt med LinkedIns vilkaar.
 
 ## Vigtigt
 
-- Scriptet henter kun indlaeg, du har adgang til i din egen konto.
-- "Saved items" er private; andre brugeres saved-lister kan ikke hentes.
-- Brug scriptet i overensstemmelse med LinkedIns vilkaar.
+- Denne metode scraper ikke LinkedIn web UI.
+- Du arbejder kun paa data, som LinkedIn officielt har udleveret til dig.
